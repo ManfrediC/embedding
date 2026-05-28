@@ -520,24 +520,62 @@ unrelated abstracts. Embeddings could support stage 05 in three ways:
 This would complement the existing title/author/boundary logic. It should feed
 review packs under `qa/`, not silently rewrite `text_proceedings_ready/`.
 
-### 4. Source Categorisation Calibration
+### 4. Genre And Source-Type Assignment
 
 The source-category registry is central because it controls count eligibility,
 LangExtract mode, case-series splitting, and quality workflow. Embeddings can
-make this layer easier to audit:
+make this layer easier to audit and, eventually, easier to assign for new or
+uncertain papers.
 
-- Train or evaluate a simple classifier over paper/document embeddings to
-  predict source category as a weak calibration signal.
-- Surface papers whose embedding-neighbour category distribution disagrees with
+The useful framing is "genre" rather than only topic. The model should help
+distinguish the role a paper plays in the review:
+
+- single case report;
+- case series or multi-case paper;
+- observational group study;
+- interventional study;
+- conference abstract or proceedings item;
+- review article;
+- lab-heavy clinical/translational paper with little extractable patient-level
+  data;
+- non-clinical/basic-science or methods-heavy paper;
+- unclear/manual-review item.
+
+Potential workflow:
+
+- Build document-level and abstract/opening-section embeddings for every
+  paper, because genre signals are often strongest in titles, abstracts,
+  methods, and headings.
+- Build source-type prototypes from reviewed/high-confidence rows in
+  `source_categorisation_registry.csv` and manual-review overrides.
+- Train a simple classifier over embeddings and sparse lexical features as a
+  weak advisory model, not as the source of truth.
+- For each uncertain paper, report the top candidate genres, nearest reviewed
+  examples, and why the assignment is ambiguous.
+- Add an explicit abstention class. If the nearest neighbours are mixed or the
+  paper lies near a boundary, route it to manual review rather than forcing a
+  type.
+- Treat `lab_heavy_clinical_or_translational` as a first-class target because
+  those papers can mention SPSD patients while still containing little
+  extractable clinical case data.
+- Surface papers whose embedding-neighbour genre distribution disagrees with
   their current `source_category`.
-- Build category prototypes from reviewed/high-confidence rows, then rank
-  `unclear_manual_review` papers by proximity to prototypes.
 - Find category boundary cases, especially between `single_case_report`,
-  `case_series_or_multi_case`, `observational_group_study`, and
-  `conference_abstract`.
+  `case_series_or_multi_case`, `observational_group_study`,
+  `conference_abstract`, and lab-heavy/translational papers.
 
 Useful output: a `qa/source_category_embedding_audit.csv` with target category,
-nearest-neighbour category mix, disagreement flags, and evidence snippets.
+candidate genre probabilities or ranks, nearest-neighbour category mix,
+abstention/disagreement flags, and evidence snippets.
+
+Acceptance check for this idea should be measured against reviewed rows:
+
+- top-1 and top-3 genre agreement on reviewed source-category examples;
+- abstention rate on true boundary cases;
+- zero silent high-confidence assignments for papers that reviewed routing says
+  are wrong-source, unclear, or manual-review;
+- separate reporting for lab-heavy/translational papers, because they are a
+  known downstream hazard for over-extraction.
 
 ### 5. Stage-06 Case Count Assistance
 
@@ -724,7 +762,7 @@ The first useful embedding feature should be boring and auditable:
 4. Produce KNN neighbours, simple clusters, a 2D projection, and advisory
    within-paper chunk roles.
 5. Create four review packs:
-   - source-category disagreement candidates;
+   - source-category/genre disagreement candidates;
    - proceedings QC neighbours;
    - case-count manual-review neighbours;
    - intra-paper patient/shared-context chunk-role candidates.
