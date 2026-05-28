@@ -576,7 +576,72 @@ regularities in case-series structure:
 The output should support the existing stage-07 review workflow and respect the
 same rule: attribution ambiguity escalates to review.
 
-### 7. LangExtract Example And Prompt Support
+### 7. Intra-Paper Chunk Typing
+
+A particularly useful within-paper idea is to embed text chunks from one paper
+and separate them by evidence role:
+
+- general/background material, usually introduction or discussion;
+- methods or shared cohort context;
+- patient-1-specific vignette;
+- patient-2-specific vignette;
+- other patient-specific vignettes;
+- table rows or compact case summaries;
+- aggregate/multiple-patient findings;
+- references, boilerplate, and irrelevant text.
+
+This would support the project more directly than a generic paper-level map.
+The goal is not just to find similar papers; it is to identify which parts of a
+paper should be read together for extraction.
+
+Recommended design:
+
+- Chunk each paper with page and section provenance, preserving adjacency.
+- Build embeddings for chunks and also keep lexical anchors such as
+  `Case 1`, `Patient 2`, `Subject A`, `Table 1`, and `patients`.
+- Use reviewed stage-07 split-auto papers and single-case gold material as
+  examples of known chunk roles.
+- Combine semantic similarity with document order. Adjacent chunks with similar
+  role and consistent patient labels should merge; semantically similar chunks
+  with different patient labels should stay separate.
+- Represent output as advisory chunk-role spans, for example:
+  `shared_context`, `unit_candidate:p1`, `unit_candidate:p2`,
+  `aggregate_context`, `background`, `ignore_reference`.
+
+This could help in several SPS review tasks:
+
+- Stage 07: propose attribution-safe unit boundaries before human review.
+- Stage 06: distinguish a true case count from background literature counts or
+  aggregate cohort denominators.
+- LangExtract: feed patient-specific chunks to individual extraction and shared
+  context chunks as linked context, instead of sending the whole paper.
+- 83-column extraction: retrieve field evidence from the right patient-specific
+  span rather than from the introduction or another patient's vignette.
+- Quality assessment: keep design/methods chunks separate from case narratives.
+
+The review artefact should be a small, readable table such as
+`qa/intra_paper_chunk_role_review.csv` with:
+
+- `paper_id`;
+- `chunk_id`;
+- page range;
+- proposed role;
+- patient/unit label if any;
+- nearest reviewed role examples;
+- source text preview;
+- confidence and ambiguity flags.
+
+Important guardrail: embeddings should not assign a clinical fact to patient 1
+because the chunk is near another patient-1 chunk. Patient attribution must come
+from local labels, ordering, table structure, or reviewed context. If the role
+or patient label is ambiguous, the chunk should be marked for review.
+
+This is an ideal early pilot because it can be evaluated against existing
+stage-07 reviewed material and does not require paid API calls. A first pass
+could use 10 to 20 papers: several split-auto case series, several manual-review
+case series, a few single-case reports, and a few observational/group papers.
+
+### 8. LangExtract Example And Prompt Support
 
 The LangExtract example plan already says manually extracted datasheet rows
 should be paired with source quotes and reviewed before becoming examples.
@@ -594,7 +659,7 @@ Embeddings can accelerate the quote-linking and diversity-selection parts:
 This is likely one of the highest-leverage uses because the current prompt
 examples are sparse while the manual datasheet exports are rich.
 
-### 8. 83-Column Master Table Evidence Retrieval
+### 9. 83-Column Master Table Evidence Retrieval
 
 The 83-column master-table plan requires every filled value to have supporting
 evidence metadata. Embeddings can become the field-level evidence candidate
@@ -613,7 +678,7 @@ evidence-retrieval problems. The risk is missing evidence through poor queries,
 so the retrieval layer needs recall-oriented evaluation against the manual
 datasheet examples.
 
-### 9. Duplicate, Wrong-Source, And OCR QC
+### 10. Duplicate, Wrong-Source, And OCR QC
 
 Some review failures are not semantic extraction failures; they are source
 quality failures. Embeddings can help flag them:
@@ -630,7 +695,7 @@ quality failures. Embeddings can help flag them:
 This should feed `paper_revisit_registry` candidates only after manual review;
 do not mutate upstream source linkage automatically.
 
-### 10. Phenotype And Treatment Landscape Exploration
+### 11. Phenotype And Treatment Landscape Exploration
 
 Once the canonical extraction path is stable, embeddings can support exploratory
 scientific orientation:
@@ -647,25 +712,29 @@ scientific orientation:
 These maps are hypothesis-generation and review-navigation tools. Any clinical
 claims still require extraction from source evidence.
 
-### 11. Suggested Implementation Order
+### 12. Suggested Implementation Order
 
 The first useful embedding feature should be boring and auditable:
 
 1. Build a manifest from `paper_artifact_registry.csv` and the key downstream
    registries.
 2. Build paper-level and chunk-level text views with hashes and source paths.
-3. Generate local embeddings on a 50-paper stratified pilot.
-4. Produce KNN neighbours, simple clusters, and a 2D projection.
-5. Create three review packs:
+3. Generate local embeddings on a 50-paper stratified corpus pilot and a 10 to
+   20 paper intra-paper chunk-role pilot.
+4. Produce KNN neighbours, simple clusters, a 2D projection, and advisory
+   within-paper chunk roles.
+5. Create four review packs:
    - source-category disagreement candidates;
    - proceedings QC neighbours;
-   - case-count manual-review neighbours.
+   - case-count manual-review neighbours;
+   - intra-paper patient/shared-context chunk-role candidates.
 6. Have the user judge whether the packs save review time.
 7. Only then scale to all 1,027 text JSONs or try FlashLib/GPU acceleration.
 
 Acceptance evidence for this first pass:
 
 - every output row links back to `paper_id`, source text path, and chunk/page;
+- intra-paper role outputs distinguish advisory labels from reviewed facts;
 - no upstream `sps-review` files are modified;
 - at least one review pack contains actionable candidates that a human can
   accept, reject, or mark uncertain;
