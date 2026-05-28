@@ -20,6 +20,7 @@ against a small judged query set.
 - `tests/`: future tests and fixtures.
 - `data/`: generated local manifests, chunks, embeddings, and indexes.
 - `results/`: run outputs and metrics.
+- `spec/`: step-by-step implementation specs and clarifying questions.
 - `qa/`: sampled review material.
 - `env/`: local untracked environment files.
 

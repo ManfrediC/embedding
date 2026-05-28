@@ -44,6 +44,7 @@ to `paper_id`, source text path, and page or chunk location.
 - `env/`: untracked local environment files.
 - `qa/`: review sheets, sampled checks, and human evaluation packs.
 - `results/`: run metrics, logs, and reports.
+- `spec/`: implementation specs and clarifying questions before coding.
 - `src/embedding_sps/`: reusable experiment code.
 - `tests/`: focused tests and fixtures.
 
@@ -69,4 +70,3 @@ Final reports should include:
 - Checks skipped and why.
 - Remaining risks, especially cost, provenance, OCR quality, and clinical
   over-interpretation.
-
