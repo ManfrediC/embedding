@@ -21,6 +21,15 @@ keeping `C:\Projects\sps-review` read-only.
 - `results/manifest_summary.md`
 - `results/manifest_summary.json`
 
+Generated outputs should stay grouped by operation:
+
+- `data/interim/manifest/full.csv`
+- `data/interim/manifest/full.jsonl`
+- `data/interim/manifest/pilot_100.csv`
+- `data/interim/manifest/pilot_100.jsonl`
+- `results/manifest/summary.md`
+- `results/manifest/summary.json`
+
 Generated outputs stay ignored by git unless a later decision promotes a small
 sample fixture.
 
@@ -49,20 +58,25 @@ sample fixture.
    local PDFs/text, or only rows eligible for embedding?
    - Default assumption: include all rows and mark missing text/PDF rows as
      skipped.
+     - answer: as you say, but also create a smaller registry for the 100 papers we'll test embedding on
 2. Which output format do you prefer for the first manifest: CSV, JSONL, or
    both?
    - Default assumption: CSV for review plus JSON summary.
+   - answer:yes
 3. Should the manifest resolve manual overrides into final columns only, or keep
    both raw and resolved stage fields?
    - Default assumption: keep both when practical, with resolved columns used
      for decisions.
+     - answer: just keep manual overrides
 4. Which revisit issues should make a row ineligible rather than just flagged?
    - Default assumption: wrong-source and missing-text rows are ineligible;
      manual-review rows remain eligible but flagged.
+     - ok
 5. Should the first manifest be regenerated every run, or should it be versioned
    by run id?
    - Default assumption: deterministic overwrite in `data/interim/`, with a
      timestamped summary under `results/`.
+     - answer: ok
 
 ## Acceptance Evidence
 

@@ -9,3 +9,14 @@ Expected first modules:
 - local embedding/index adapters.
 - retrieval evaluation helpers.
 
+## Manifest Builder
+
+Build the local full and 100-paper pilot manifests from the upstream SPS review
+registries:
+
+```bash
+python src/embedding_sps/manifest.py
+```
+
+The command writes ignored generated outputs under `data/interim/manifest/` and
+`results/manifest/` by default. It never writes to `C:\Projects\sps-review`.
